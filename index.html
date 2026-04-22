@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1D9E75">
+  <meta name="description" content="Drug XP Tracker – logge deine Sessions, level auf, compete mit Freunden">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MindHoliday">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-startup-image" href="icons/icon-512.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-touch-fullscreen" content="yes">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css?v=14">
+  <title>Drug XP</title>
+</head>
+<body>
+
+  <!-- ── App Shell ── -->
+  <!-- ── Splash Screen ── -->
+  <div id="splash">
+    <canvas id="splash-canvas"></canvas>
+    <div id="tap-screen">
+      <div class="tap-logo">MH</div>
+      <div class="tap-text">Tap to start</div>
+      <div class="tap-hint">🔊 Sound an</div>
+    </div>
+    <div id="disclaimer-screen" class="disclaimer-hidden">
+      <div class="disc-inner">
+        <div class="disc-icon">⚠️</div>
+        <div class="disc-title">Wichtiger Hinweis</div>
+        <div class="disc-text">
+          MindHoliday animiert <strong>nicht</strong> zum Drogenkonsum. Die App richtet sich ausschließlich an Erwachsene, die bereits konsumieren und ihren Konsum im Blick behalten möchten.
+        </div>
+        <div class="disc-text" style="margin-top:10px">
+          Drogenkonsum birgt ernsthafte gesundheitliche Risiken. Bei Problemen oder Abhängigkeit:
+        </div>
+        <div class="disc-hotline">
+          🇩🇪 Drogenhotline: <strong>01806 313 031</strong><br>
+          <span style="font-size:11px;opacity:0.6">Mo–Fr 8–22 Uhr · drugcom.de</span>
+        </div>
+        <button class="disc-btn" id="disc-accept">Ich bin 18+ und verstehe dies</button>
+        <div class="disc-skip" onclick="skipDisclaimer()">Überspringen</div>
+      </div>
+    </div>
+
+    <div id="splash-screen1" class="splash-screen">
+      <div class="splash-joint">🚬</div>
+      <div class="splash-title">MindHoliday</div>
+      <div class="splash-tagline">escape the ordinary</div>
+    </div>
+    <div id="splash-screen2" class="splash-screen">
+      <div class="splash-studio">Valkor Tec</div>
+      <div class="splash-studio-sub">Games</div>
+      <div class="splash-police">we don't work with the police</div>
+    </div>
+  </div>
+
+  <canvas id="particle-canvas"></canvas>
+
+  <!-- Level Up overlay -->
+  <div id="levelup-overlay">
+    <div class="levelup-card">
+      <span class="levelup-icon" id="lu-icon">🌿</span>
+      <div class="levelup-title">Level aufgestiegen!</div>
+      <div class="levelup-name" id="lu-name">Kenner</div>
+      <div class="levelup-sub" id="lu-sub">Du bist jetzt Level 2</div>
+      <div class="levelup-stars">⭐⭐⭐</div>
+      <button class="btn-primary" style="margin-top:0" onclick="closeLevelUp()">Weiter</button>
+    </div>
+  </div>
+
+  <div id="app">
+
+    <!-- Header -->
+    <header id="header">
+      <div class="header-inner">
+        <div class="header-left">
+          <span id="hdr-avatar">🌿</span>
+          <div>
+            <div id="hdr-name">Lade...</div>
+            <div id="hdr-level">Level 1 · Neuling</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="xp-pill" id="hdr-xp">0 XP</div>
+          <button class="icon-btn" id="notif-btn" onclick="nav('notifs')">
+            🔔<span class="badge" id="notif-badge" style="display:none">0</span>
+          </button>
+        </div>
+      </div>
+      <div class="xp-bar-track"><div class="xp-bar-fill" id="hdr-xpbar"></div></div>
+    </header>
+
+    <!-- Screens -->
+    <main id="main">
+
+      <!-- ══ LOG SCREEN ══ -->
+      <section id="screen-log" class="screen active">
+        <h2>Session loggen</h2>
+        <div class="form-card">
+          <div class="form-row">
+            <div class="field">
+              <label>Substanz</label>
+              <select id="f-drug" onchange="updateStrains()">
+                <option value="cannabis">Cannabis</option>
+                <option value="mdma">MDMA / Ecstasy</option>
+                <option value="lsd">LSD</option>
+                <option value="psilocybin">Pilze</option>
+                <option value="speed">Speed / Amphetamin</option>
+                <option value="kokain">Kokain</option>
+                <option value="ketamin">Ketamin</option>
+                <option value="alkohol">Alkohol</option>
+                <option value="andere">Andere</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Sorte / Strain</label>
+              <select id="f-strain" onchange="handleStrainChange()"></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Menge</label>
+              <input type="number" id="f-amount" placeholder="z.B. 0.5" step="0.1" min="0" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label>Einheit</label>
+              <select id="f-unit"></select>
+            </div>
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-label">
+              <span>High-Intensität</span>
+              <span class="sval" id="v-intensity">5</span>
+            </div>
+            <input type="range" min="1" max="10" value="5" step="1" id="f-intensity"
+              oninput="document.getElementById('v-intensity').textContent=this.value">
+          </div>
+          <div class="slider-field">
+            <div class="slider-label">
+              <span>Wohlbefinden</span>
+              <span class="sval" id="v-wellbeing">7</span>
+            </div>
+            <input type="range" min="1" max="10" value="7" step="1" id="f-wellbeing"
+              oninput="document.getElementById('v-wellbeing').textContent=this.value">
+          </div>
+
+          <div class="field">
+            <label>Effekte</label>
+            <div class="mood-grid" id="mood-grid"></div>
+          </div>
+
+          <div class="field">
+            <label>Notiz (optional)</label>
+            <textarea id="f-note" placeholder="Wie war die Session?" rows="2"></textarea>
+          </div>
+
+          <button class="btn-primary" onclick="logSession()">
+            <span>+ Session speichern</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ══ HISTORY SCREEN ══ -->
+      <section id="screen-history" class="screen">
+        <h2>Meine Sessions</h2>
+        <div id="history-list"><div class="empty">Noch keine Sessions. Leg los!</div></div>
+      </section>
+
+      <!-- ══ LEADERBOARD SCREEN ══ -->
+      <section id="screen-board" class="screen">
+        <div class="board-header-row">
+          <h2>Rangliste</h2>
+          <div class="filter-pills">
+            <button class="fpill active" onclick="setFilter('week',this)">Diese Woche</button>
+            <button class="fpill" onclick="setFilter('all',this)">Gesamt</button>
+          </div>
+        </div>
+        <div class="week-timer-box" id="week-timer-box">
+          <span class="timer-val" id="week-timer">–</span>
+          <span class="timer-label">bis Reset</span>
+        </div>
+        <div id="board-list"><div class="empty">Lade...</div></div>
+      </section>
+
+      <!-- ══ FRIENDS SCREEN ══ -->
+      <section id="screen-friends" class="screen">
+        <h2>Freunde</h2>
+
+        <div class="info-card">
+          <div class="sec-label">Dein Invite-Code</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+            <span class="code-display" id="my-code">–</span>
+            <button class="btn-sm" onclick="copyCode()">Kopieren</button>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="sec-label">Freund hinzufügen</div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input type="text" id="friend-inp" placeholder="Code z.B. XP-AB12C" style="flex:1;text-transform:uppercase">
+            <button class="btn-sm" onclick="addFriend()">+ Hinzufügen</button>
+          </div>
+          <div id="friend-msg" class="form-msg"></div>
+        </div>
+
+        <div class="sec-label" style="margin-bottom:8px">Freundesliste (<span id="friend-count">0</span>)</div>
+        <div id="friend-list"><div class="empty">Noch keine Freunde. Teile deinen Code!</div></div>
+      </section>
+
+      <!-- ══ PROFILE SCREEN ══ -->
+      <section id="screen-profile" class="screen">
+        <div class="profile-hero">
+          <div class="profile-avatar" id="p-avatar">🌿</div>
+          <div class="profile-name" id="p-name">–</div>
+          <div class="profile-level" id="p-level">Level 1 · Neuling</div>
+          <div class="xp-bar-track" style="margin-top:10px">
+            <div class="xp-bar-fill" id="p-xpbar"></div>
+          </div>
+          <div class="profile-xp-label" id="p-xp-label">0 / 100 XP</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-num" id="s-total">0</div><div class="stat-label">Sessions</div></div>
+          <div class="stat-card"><div class="stat-num" id="s-xp">0</div><div class="stat-label">XP gesamt</div></div>
+          <div class="stat-card"><div class="stat-num" id="s-avg">–</div><div class="stat-label">Ø Intensität</div></div>
+          <div class="stat-card"><div class="stat-num" id="s-fav">–</div><div class="stat-label">Lieblingsstoff</div></div>
+        </div>
+
+        <div class="sec-label" style="margin-bottom:8px">Badges</div>
+        <div class="badge-grid" id="badge-grid"></div>
+
+        <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:10px">
+          <button class="btn-sm" onclick="logout()" style="padding:10px;font-size:14px">Abmelden (Profil bleibt erhalten)</button>
+          <button class="btn-danger" onclick="confirmReset()">Daten zurücksetzen</button>
+        </div>
+      </section>
+
+      <!-- ══ NOTIFICATIONS SCREEN ══ -->
+      <section id="screen-notifs" class="screen">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
+          <h2 style="margin:0;flex:1">Benachrichtigungen</h2>
+          <button class="btn-sm" onclick="markAllRead()">Alle gelesen</button>
+        </div>
+        <div id="notif-list"><div class="empty">Keine Benachrichtigungen</div></div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Nav -->
+    <nav id="bottom-nav">
+      <button class="nav-btn active" onclick="nav('log')">
+        <div class="nav-icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </div>
+        <span>Log</span>
+      </button>
+      <button class="nav-btn" onclick="nav('history')">
+        <div class="nav-icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+        </div>
+        <span>Historie</span>
+      </button>
+      <button class="nav-btn" onclick="nav('board')">
+        <div class="nav-icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <span>Board</span>
+      </button>
+      <button class="nav-btn" onclick="nav('friends')">
+        <div class="nav-icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <span>Freunde</span>
+      </button>
+      <button class="nav-btn" onclick="nav('profile')">
+        <div class="nav-icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span>Profil</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Setup Modal (shown on first launch) -->
+  <div id="setup-overlay">
+    <div class="setup-modal">
+      <div style="font-size:32px;font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:4px;text-shadow:0 0 20px rgba(29,158,117,0.8)">MindHoliday</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.3);letter-spacing:.2em;text-transform:uppercase;margin-bottom:24px">by Valkor Tec Games</div>
+
+      <!-- Existing profiles -->
+      <div id="setup-existing" style="display:none">
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Profil wählen</div>
+        <div id="login-profile-list"></div>
+      </div>
+
+      <!-- Toggle new profile form -->
+      <button id="setup-new-toggle" onclick="toggleNewForm()" style="display:none;width:100%;padding:10px;background:none;border:0.5px solid rgba(255,255,255,0.15);border-radius:10px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;margin-top:12px;font-family:inherit">+ Neues Profil erstellen</button>
+
+      <!-- New profile form -->
+      <div id="setup-new-form">
+        <div class="field" style="margin-bottom:12px">
+          <label style="color:rgba(255,255,255,0.4)">Spielername</label>
+          <input type="text" id="setup-name" placeholder="z.B. KushMaster420" maxlength="20" autocomplete="off">
+        </div>
+        <div class="field">
+          <label style="color:rgba(255,255,255,0.4)">Avatar</label>
+          <div class="avatar-picker" id="avatar-picker">
+            <span class="av-opt selected" data-emoji="🌿" onclick="pickAv(this)">🌿</span>
+            <span class="av-opt" data-emoji="🍄" onclick="pickAv(this)">🍄</span>
+            <span class="av-opt" data-emoji="🔮" onclick="pickAv(this)">🔮</span>
+            <span class="av-opt" data-emoji="💊" onclick="pickAv(this)">💊</span>
+            <span class="av-opt" data-emoji="🧪" onclick="pickAv(this)">🧪</span>
+            <span class="av-opt" data-emoji="🌙" onclick="pickAv(this)">🌙</span>
+            <span class="av-opt" data-emoji="⚗️" onclick="pickAv(this)">⚗️</span>
+            <span class="av-opt" data-emoji="🎯" onclick="pickAv(this)">🎯</span>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="createProfile()" style="margin-top:12px">Profil erstellen →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Dialog -->
+  <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;align-items:center;justify-content:center;padding:24px">
+    <div style="background:var(--surface);border-radius:20px;padding:28px 24px;width:100%;max-width:320px;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">🗑️</div>
+      <div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:8px">Alles löschen?</div>
+      <div style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:24px">
+        Dein Profil <strong style="color:var(--text)" id="confirm-name"></strong> bleibt erhalten, aber alle Sessions, XP, Freunde und Benachrichtigungen werden unwiderruflich gelöscht.
+      </div>
+      <button onclick="doReset()" style="width:100%;padding:13px;background:#E24B4A;color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">Ja, alles löschen</button>
+      <button onclick="closeConfirm()" style="width:100%;padding:11px;background:none;border:0.5px solid var(--border2);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:var(--text);font-family:inherit">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script src="js/app.js?v=14"></script>
+</body>
+</html>
