@@ -806,7 +806,17 @@ function addFriend() {
   msg.textContent = '';
   renderFriends();
   renderBoard();
-  addNotif(`${newFriend.name} ist jetzt dein Freund 👋`);
+
+  // Local notification – when Supabase is live, this will also
+  // send a real push to the friend's device
+  addNotif(`🤝 Du hast ${newFriend.name} als Freund hinzugefügt! Dein Code wurde geteilt.`);
+
+  // Simulate: friend "added you back" after a short delay
+  setTimeout(() => {
+    addNotif(`👋 ${newFriend.name} hat deinen Invite-Code akzeptiert und ist jetzt in deiner Freundesliste!`);
+    updateHeader();
+  }, 2000);
+
   showToast(newFriend.name + ' hinzugefügt!');
 }
 
