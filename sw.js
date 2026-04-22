@@ -2,13 +2,15 @@
 //  Drug XP – sw.js  (Service Worker)
 // ═══════════════════════════════════════════
 
-const CACHE_NAME = 'drugxp-v19';
+const CACHE_NAME = 'drugxp-v20';
 const ASSETS = [
   '/',
   '/index.html',
   '/css/style.css',
   '/js/app.js',
   '/manifest.json',
+  '/favicon.svg',
+  '/favicon.png',
 ];
 
 // ── Install: cache all shell assets ──────────
