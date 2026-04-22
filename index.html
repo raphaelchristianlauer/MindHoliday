@@ -14,7 +14,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-touch-fullscreen" content="yes">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="css/style.css?v=16">
+  <link rel="stylesheet" href="css/style.css?v=19">
   <title>Drug XP</title>
 </head>
 <body>
@@ -242,7 +242,7 @@
             <div class="sec-label">Spielername ändern</div>
             <div style="display:flex;gap:8px;margin-top:8px">
               <input type="text" id="new-name-inp" placeholder="Neuer Name..." maxlength="20"
-                style="flex:1;font-size:14px" autocomplete="off">
+                style="flex:1" autocomplete="off">
               <button class="btn-sm" onclick="changeName()">Ändern</button>
             </div>
             <div id="name-change-msg" style="font-size:12px;margin-top:6px;min-height:16px"></div>
@@ -371,7 +371,7 @@
   </div>
 
   <!-- Name taken dialog -->
-  <div id="name-taken-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;align-items:center;justify-content:center;padding:24px">
+  <div id="name-taken-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;padding:24px">
     <div style="background:var(--surface);border-radius:20px;padding:28px 24px;width:100%;max-width:320px;text-align:center">
       <div style="font-size:36px;margin-bottom:12px">🚫</div>
       <div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:8px">Name vergeben</div>
@@ -401,6 +401,6 @@
   <!-- Toast -->
   <div id="toast"></div>
 
-  <script src="js/app.js?v=18"></script>
+  <script src="js/app.js?v=19"></script>
 </body>
 </html>

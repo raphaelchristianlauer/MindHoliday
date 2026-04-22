@@ -332,15 +332,20 @@ function getSavedProfiles() {
       } catch(e) {}
     }
   }
-  // Also check legacy single profile
+  // Also check legacy single profile (migrate if needed)
   try {
     const legacy = JSON.parse(localStorage.getItem('dxp_profile'));
-    if (legacy && legacy.name && !profiles.find(p => p.name === legacy.name)) {
-      // migrate to new format
+    if (legacy && legacy.name) {
       const id = legacy.id || 'legacy';
-      localStorage.setItem('dxp_profile_' + id, JSON.stringify({...legacy, id}));
-      localStorage.setItem('dxp_sessions_' + id, localStorage.getItem('dxp_sessions') || '[]');
-      profiles.push({...legacy, key: id});
+      const alreadyMigrated = profiles.find(p => p.key === id);
+      if (!alreadyMigrated) {
+        const migrated = {...legacy, id};
+        localStorage.setItem('dxp_profile_' + id, JSON.stringify(migrated));
+        if (!localStorage.getItem('dxp_sessions_' + id)) {
+          localStorage.setItem('dxp_sessions_' + id, localStorage.getItem('dxp_sessions') || '[]');
+        }
+        profiles.push({...migrated, key: id});
+      }
     }
   } catch(e) {}
   return profiles;
@@ -409,13 +414,17 @@ function changeName() {
   const oldName = profile.name;
   profile.name = newName;
   save();
+
+  // Update only the parts that changed – don't call renderProfile()
+  // because that would wipe the success message
   updateHeader();
-  renderProfile();
+  const pName = document.getElementById('p-name');
+  if (pName) pName.textContent = newName;
 
   inp.value = '';
   msg.style.color = 'var(--green)';
-  msg.textContent = `✓ Name geändert von "${oldName}" zu "${newName}"`;
-  setTimeout(() => { msg.textContent = ''; }, 3000);
+  msg.textContent = '✓ Name geändert zu "' + newName + '"';
+  setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
   showToast('Name geändert!');
 }
 
@@ -424,7 +433,9 @@ function resetProfile() {
   sessions = [];
   friends = [];
   notifications = [];
+  customStrains = {};
   profile.xp = 0;
+  localStorage.removeItem('dxp_custom_strains');
   save();
   updateHeader();
   renderHistory();
@@ -608,7 +619,7 @@ function logSession() {
   const entry = {
     id: Date.now(),
     drug:      document.getElementById('f-drug').value,
-    strain:    document.getElementById('f-strain').value === '__custom__' ? 'Unbekannt' : document.getElementById('f-strain').value,
+    strain:    (() => { const v = document.getElementById('f-strain').value; return (!v || v === '__custom__') ? 'Unbekannt' : v; })(),
     amount,
     unit:      document.getElementById('f-unit').value,
     intensity: parseInt(document.getElementById('f-intensity').value),
@@ -698,7 +709,7 @@ function renderBoard() {
   const el = document.getElementById('board-list');
   if (!profile) { el.innerHTML = '<div class="empty">Nicht eingeloggt</div>'; return; }
 
-  const myXP    = filterMode === 'week' ? getWeekXP(sessions) : profile.xp;
+  const myXP    = filterMode === 'week' ? getWeekXP(sessions) : (profile.xp || 0);
   const mySess  = filterMode === 'week' ? getWeekSessions(sessions) : sessions.length;
 
   const all = [
@@ -734,20 +745,22 @@ function renderBoard() {
 function startWeekTimer() {
   if (weekTimerInterval) clearInterval(weekTimerInterval);
   function tick() {
-    const now = new Date();
-    const next = new Date(now);
-    const day = now.getDay();
-    const daysUntil = day === 0 ? 1 : (8 - day) % 7 || 7;
-    next.setDate(now.getDate() + daysUntil);
-    next.setHours(0, 0, 0, 0);
-    const diff = next - now;
-    const d = Math.floor(diff / 86400000);
-    const h = Math.floor((diff % 86400000) / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-    const el = document.getElementById('week-timer');
-    if (el) el.textContent = (d > 0 ? d + 'T ' : '') +
-      String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    try {
+      const now = new Date();
+      const next = new Date(now);
+      const day = now.getDay();
+      const daysUntil = day === 0 ? 1 : (8 - day) % 7 || 7;
+      next.setDate(now.getDate() + daysUntil);
+      next.setHours(0, 0, 0, 0);
+      const diff = next - now;
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      const el = document.getElementById('week-timer');
+      if (el) el.textContent = (d > 0 ? d + 'T ' : '') +
+        String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    } catch(e) {}
   }
   tick();
   weekTimerInterval = setInterval(tick, 1000);
@@ -802,7 +815,9 @@ function addFriend() {
 
   friends.push(newFriend);
   save();
-  document.getElementById('friend-inp').value = '';
+  const fInp = document.getElementById('friend-inp');
+  fInp.value = '';
+  fInp.blur(); // dismiss keyboard on mobile
   msg.textContent = '';
   renderFriends();
   renderBoard();
@@ -829,7 +844,10 @@ function removeFriend(id) {
 
 function getTimeAgo(ts) {
   if (!ts) return '';
-  const diff = Date.now() - new Date(ts).getTime();
+  const parsed = new Date(ts).getTime();
+  if (isNaN(parsed)) return '';
+  const diff = Date.now() - parsed;
+  if (diff < 0) return 'gerade eben';
   const mins = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
@@ -904,9 +922,14 @@ function renderFriends() {
 // ── Profile screen ───────────────────────────
 function renderProfile() {
   if (!profile) return;
-  // Pre-fill name change input
+  // Pre-fill name change input placeholder
   const nameInp = document.getElementById('new-name-inp');
-  if (nameInp) nameInp.placeholder = profile.name;
+  if (nameInp) {
+    nameInp.placeholder = 'z.B. ' + profile.name;
+    nameInp.value = '';
+    const msg2 = document.getElementById('name-change-msg');
+    if (msg2) msg2.textContent = '';
+  }
   const lvlIdx = getLevel(profile.xp);
   const lv = LEVELS[lvlIdx];
   const pct = Math.min(100, Math.round((profile.xp - lv.min) / (lv.max - lv.min) * 100));
