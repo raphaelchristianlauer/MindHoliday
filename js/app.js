@@ -134,6 +134,7 @@ let friends = [];
 let notifications = [];
 let filterMode = 'week';
 let weekTimerInterval = null;
+let shownEggs = new Set();
 
 // ── Storage helpers ─────────────────────────
 function save() {
@@ -1430,8 +1431,6 @@ const EASTER_EGGS = [
       sessions.filter(s => s.moods && s.moods.includes('paranoid')).length >= 10,
   },
 ];
-
-let shownEggs = new Set(JSON.parse(localStorage.getItem('dxp_shown_eggs') || '[]'));
 
 function checkEasterEggs(sessions) {
   for (const egg of EASTER_EGGS) {
