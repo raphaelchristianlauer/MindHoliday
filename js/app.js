@@ -372,6 +372,53 @@ function toggleNewForm() {
   btn.textContent = isHidden ? '↑ Abbrechen' : '+ Neues Profil erstellen';
 }
 
+function changeName() {
+  const inp = document.getElementById('new-name-inp');
+  const msg = document.getElementById('name-change-msg');
+  const newName = inp.value.trim();
+
+  // Validation
+  if (!newName) {
+    msg.style.color = '#E24B4A';
+    msg.textContent = 'Bitte einen Namen eingeben.';
+    return;
+  }
+  if (newName.length < 3) {
+    msg.style.color = '#E24B4A';
+    msg.textContent = 'Mindestens 3 Zeichen.';
+    return;
+  }
+  if (newName === profile.name) {
+    msg.style.color = '#E24B4A';
+    msg.textContent = 'Das ist bereits dein Name.';
+    return;
+  }
+
+  // Check locally if another saved profile has this name
+  const saved = getSavedProfiles();
+  const taken = saved.find(p => p.name.toLowerCase() === newName.toLowerCase() && p.id !== profile.id);
+  if (taken) {
+    document.getElementById('taken-name-display').textContent = newName;
+    document.getElementById('name-taken-overlay').style.display = 'flex';
+    inp.value = '';
+    return;
+  }
+
+  // TODO: When Supabase is connected, check server-side uniqueness here
+  // For now: local check only
+  const oldName = profile.name;
+  profile.name = newName;
+  save();
+  updateHeader();
+  renderProfile();
+
+  inp.value = '';
+  msg.style.color = 'var(--green)';
+  msg.textContent = `✓ Name geändert von "${oldName}" zu "${newName}"`;
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+  showToast('Name geändert!');
+}
+
 function resetProfile() {
   // Nur Sessions, Friends, Notifs löschen – Profil bleibt
   sessions = [];
@@ -847,6 +894,9 @@ function renderFriends() {
 // ── Profile screen ───────────────────────────
 function renderProfile() {
   if (!profile) return;
+  // Pre-fill name change input
+  const nameInp = document.getElementById('new-name-inp');
+  if (nameInp) nameInp.placeholder = profile.name;
   const lvlIdx = getLevel(profile.xp);
   const lv = LEVELS[lvlIdx];
   const pct = Math.min(100, Math.round((profile.xp - lv.min) / (lv.max - lv.min) * 100));

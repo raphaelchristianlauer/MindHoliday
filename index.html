@@ -236,6 +236,18 @@
         <div class="badge-grid" id="badge-grid"></div>
 
         <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:10px">
+
+          <!-- Name ändern -->
+          <div class="info-card" style="margin-bottom:0">
+            <div class="sec-label">Spielername ändern</div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input type="text" id="new-name-inp" placeholder="Neuer Name..." maxlength="20"
+                style="flex:1;font-size:14px" autocomplete="off">
+              <button class="btn-sm" onclick="changeName()">Ändern</button>
+            </div>
+            <div id="name-change-msg" style="font-size:12px;margin-top:6px;min-height:16px"></div>
+          </div>
+
           <button class="btn-sm" onclick="logout()" style="padding:10px;font-size:14px">Abmelden (Profil bleibt erhalten)</button>
           <button class="btn-danger" onclick="confirmReset()">Daten zurücksetzen</button>
         </div>
@@ -358,6 +370,21 @@
     </div>
   </div>
 
+  <!-- Name taken dialog -->
+  <div id="name-taken-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;align-items:center;justify-content:center;padding:24px">
+    <div style="background:var(--surface);border-radius:20px;padding:28px 24px;width:100%;max-width:320px;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">🚫</div>
+      <div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:8px">Name vergeben</div>
+      <div style="font-size:14px;color:var(--text-2);margin-bottom:20px">
+        "<span id="taken-name-display"></span>" wird bereits verwendet. Bitte wähle einen anderen Namen.
+      </div>
+      <button onclick="document.getElementById('name-taken-overlay').style.display='none'"
+        style="width:100%;padding:12px;background:var(--green);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
+        OK
+      </button>
+    </div>
+  </div>
+
   <!-- Confirm Dialog -->
   <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;align-items:center;justify-content:center;padding:24px">
     <div style="background:var(--surface);border-radius:20px;padding:28px 24px;width:100%;max-width:320px;text-align:center">
@@ -374,6 +401,6 @@
   <!-- Toast -->
   <div id="toast"></div>
 
-  <script src="js/app.js?v=16"></script>
+  <script src="js/app.js?v=17"></script>
 </body>
 </html>
