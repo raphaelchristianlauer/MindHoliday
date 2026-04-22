@@ -401,9 +401,20 @@
     </div>
   </div>
 
+  <!-- Easter Egg Overlay -->
+  <div id="egg-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:450;align-items:center;justify-content:center;padding:24px">
+    <div id="egg-card" style="background:#1a1a18;border:0.5px solid rgba(255,255,255,0.12);border-radius:24px;padding:32px 24px;width:100%;max-width:320px;text-align:center;animation:levelUpPop 0.4s cubic-bezier(.34,1.56,.64,1)">
+      <div id="egg-icon" style="font-size:52px;margin-bottom:12px"></div>
+      <div id="egg-title" style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px;letter-spacing:-0.3px"></div>
+      <div id="egg-text" style="font-size:14px;color:rgba(255,255,255,0.55);line-height:1.6;margin-bottom:24px"></div>
+      <button id="egg-btn" onclick="closeEgg()" style="width:100%;padding:13px;background:#1D9E75;color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit"></button>
+      <div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,0.15);font-style:italic" id="egg-hint"></div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast"></div>
 
-  <script src="js/app.js?v=20"></script>
+  <script src="js/app.js?v=21"></script>
 </body>
 </html>

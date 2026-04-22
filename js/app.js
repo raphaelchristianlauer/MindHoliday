@@ -164,6 +164,7 @@ function load() {
     try { notifications = JSON.parse(localStorage.getItem('dxp_notifs')) || []; } catch(e) { notifications = []; }
   }
   loadCustomStrains();
+  try { shownEggs = new Set(JSON.parse(localStorage.getItem('dxp_shown_eggs') || '[]')); } catch(e) { shownEggs = new Set(); }
 }
 
 // ── XP / Level helpers ───────────────────────
@@ -652,6 +653,9 @@ function logSession() {
   document.getElementById('v-intensity').textContent = 5;
   document.getElementById('f-wellbeing').value = 7;
   document.getElementById('v-wellbeing').textContent = 7;
+
+  // Check easter eggs
+  checkEasterEggs(sessions);
 
   // Visual effects
   runParticles(entry.drug);
@@ -1329,6 +1333,131 @@ function runSplash(onDone) {
       onDone();
     }, 4600);
   }
+}
+
+// ── Easter Eggs ───────────────────────────
+const EASTER_EGGS = [
+  {
+    id: 'marylize',
+    title: 'Marylize Leguana',
+    icon: '🦎',
+    text: 'Du hast insgesamt über 20g Cannabis geloggt. Die Leguana ist stolz auf dich.',
+    btn: 'Get it 🌿',
+    hint: 'ein seltenes Reptil grüßt dich',
+    check: (sessions) => {
+      const total = sessions
+        .filter(s => s.drug === 'cannabis' && s.unit === 'g')
+        .reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
+      return total >= 20;
+    },
+  },
+  {
+    id: 'jawbreaker',
+    title: 'Jawbreaker',
+    icon: '💀',
+    text: 'Du hast 5x "jaw tension" als Effekt geloggt. Dein Kiefer ruft nach dir.',
+    btn: 'Ich weiss...',
+    hint: 'magnesium hilft übrigens',
+    check: (sessions) =>
+      sessions.filter(s => s.moods && s.moods.some(m => m.toLowerCase().includes('jaw'))).length >= 5,
+  },
+  {
+    id: 'philosopher',
+    title: 'Der Philosoph',
+    icon: '🧠',
+    text: 'Du hast 10x "tiefgründig" geloggt. Sokrates wäre stolz.',
+    btn: 'Ich denke, also bin ich high',
+    hint: 'cogito ergo sum',
+    check: (sessions) =>
+      sessions.filter(s => s.moods && s.moods.includes('tiefgründig')).length >= 10,
+  },
+  {
+    id: 'nightcrawler',
+    title: 'Night Crawler',
+    icon: '🌑',
+    text: 'Du hast 10 Sessions nach Mitternacht geloggt. Die Nacht gehört dir.',
+    btn: 'Schlaf ist für Schwache',
+    hint: 'gute nacht... oder auch nicht',
+    check: (sessions) =>
+      sessions.filter(s => new Date(s.ts).getHours() >= 0 && new Date(s.ts).getHours() < 4).length >= 10,
+  },
+  {
+    id: 'munchieking',
+    title: 'Munchie King 👑',
+    icon: '🍕',
+    text: 'Du hast 20x "hungrig" geloggt. McDonalds sollte dich sponsorn.',
+    btn: 'I'm lovin' it',
+    hint: 'die kartoffeln rufen',
+    check: (sessions) =>
+      sessions.filter(s => s.moods && s.moods.includes('hungrig')).length >= 20,
+  },
+  {
+    id: 'polyglot',
+    title: 'Der Entdecker',
+    icon: '🗺️',
+    text: 'Du hast alle 8 Substanzen ausprobiert. Respekt oder Sorge – wir urteilen nicht.',
+    btn: 'Wissen ist Macht',
+    hint: 'valkor tec games we don't work with the police',
+    check: (sessions) => new Set(sessions.map(s => s.drug)).size >= 8,
+  },
+  {
+    id: 'speedrun',
+    title: 'Speedrunner',
+    icon: '⚡',
+    text: 'Du hast 3 Sessions am selben Tag vor 8 Uhr morgens geloggt. Das ist... beeindruckend.',
+    btn: 'Any% run',
+    hint: 'geh schlafen',
+    check: (sessions) => {
+      const byDay = {};
+      sessions.forEach(s => {
+        const h = new Date(s.ts).getHours();
+        if (h < 8) {
+          const day = new Date(s.ts).toDateString();
+          byDay[day] = (byDay[day] || 0) + 1;
+        }
+      });
+      return Object.values(byDay).some(v => v >= 3);
+    },
+  },
+  {
+    id: 'paranoidandroid',
+    title: 'Paranoid Android',
+    icon: '👁️',
+    text: 'Du hast 10x "paranoid" geloggt. Sie beobachten dich nicht. Wahrscheinlich.',
+    btn: 'Ich vertraue niemandem',
+    hint: '...oder doch?',
+    check: (sessions) =>
+      sessions.filter(s => s.moods && s.moods.includes('paranoid')).length >= 10,
+  },
+];
+
+let shownEggs = new Set(JSON.parse(localStorage.getItem('dxp_shown_eggs') || '[]'));
+
+function checkEasterEggs(sessions) {
+  for (const egg of EASTER_EGGS) {
+    if (!shownEggs.has(egg.id) && egg.check(sessions)) {
+      shownEggs.add(egg.id);
+      localStorage.setItem('dxp_shown_eggs', JSON.stringify([...shownEggs]));
+      setTimeout(() => showEgg(egg), 1200);
+      break; // show one at a time
+    }
+  }
+}
+
+function showEgg(egg) {
+  document.getElementById('egg-icon').textContent = egg.icon;
+  document.getElementById('egg-title').textContent = egg.title;
+  document.getElementById('egg-text').textContent = egg.text;
+  document.getElementById('egg-btn').textContent = egg.btn;
+  document.getElementById('egg-hint').textContent = egg.hint;
+  const overlay = document.getElementById('egg-overlay');
+  overlay.style.display = 'flex';
+  // run particles for fun
+  runParticles('cannabis');
+}
+
+function closeEgg() {
+  document.getElementById('egg-overlay').style.display = 'none';
 }
 
 // ── Boot ──────────────────────────────────────
