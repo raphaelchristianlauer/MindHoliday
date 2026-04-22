@@ -14,7 +14,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-touch-fullscreen" content="yes">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="css/style.css?v=14">
+  <link rel="stylesheet" href="css/style.css?v=16">
   <title>Drug XP</title>
 </head>
 <body>
@@ -241,6 +241,37 @@
         </div>
       </section>
 
+      <!-- ══ FRIEND PROFILE SCREEN ══ -->
+      <section id="screen-friend-profile" class="screen">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
+          <button onclick="nav('friends')" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-2);padding:0">‹</button>
+          <h2 style="margin:0">Profil</h2>
+        </div>
+
+        <div class="profile-hero" style="margin-bottom:14px">
+          <div class="profile-avatar" id="fp-avatar">🌿</div>
+          <div class="profile-name" id="fp-name">–</div>
+          <div class="profile-level" id="fp-level">Level 1 · Neuling</div>
+          <div class="xp-bar-track" style="margin-top:10px">
+            <div class="xp-bar-fill" id="fp-xpbar"></div>
+          </div>
+          <div class="profile-xp-label" id="fp-xp-label">0 XP</div>
+        </div>
+
+        <div class="stats-grid" style="margin-bottom:14px">
+          <div class="stat-card"><div class="stat-num" id="fp-sessions">0</div><div class="stat-label">Sessions</div></div>
+          <div class="stat-card"><div class="stat-num" id="fp-xp">0</div><div class="stat-label">XP gesamt</div></div>
+          <div class="stat-card"><div class="stat-num" id="fp-avg">–</div><div class="stat-label">Ø Intensität</div></div>
+          <div class="stat-card"><div class="stat-num" id="fp-fav">–</div><div class="stat-label">Lieblingsstoff</div></div>
+        </div>
+
+        <div class="sec-label" style="margin-bottom:8px">Badges</div>
+        <div class="badge-grid" id="fp-badges" style="margin-bottom:16px"></div>
+
+        <div class="sec-label" style="margin-bottom:8px">Letzte Sessions</div>
+        <div id="fp-sessions-list"></div>
+      </section>
+
       <!-- ══ NOTIFICATIONS SCREEN ══ -->
       <section id="screen-notifs" class="screen">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
@@ -343,6 +374,6 @@
   <!-- Toast -->
   <div id="toast"></div>
 
-  <script src="js/app.js?v=14"></script>
+  <script src="js/app.js?v=16"></script>
 </body>
 </html>

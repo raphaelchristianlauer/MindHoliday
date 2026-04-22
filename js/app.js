@@ -726,6 +726,11 @@ function addFriend() {
   const names   = ['GrasHopper','CloudNine','PurpleHaze','SkyWalker','MoonRocket','NightOwl'];
   const avatars  = ['🌙','⚗️','🎯','💊','🌿','🍄'];
   const r = Math.floor(Math.random() * names.length);
+  const drugs = ['cannabis','mdma','lsd','psilocybin','alkohol'];
+  const rDrug = drugs[Math.floor(Math.random() * drugs.length)];
+  const rStrains = DEFAULT_STRAINS[rDrug] || ['unbekannt'];
+  const rStrain = rStrains[Math.floor(Math.random() * rStrains.length)];
+  const isOnline = Math.random() > 0.4;
   const newFriend = {
     id: 'f_' + Date.now(),
     name: names[r],
@@ -735,8 +740,17 @@ function addFriend() {
     weekXp: Math.round(Math.random() * 200),
     sessions: Math.round(Math.random() * 20 + 1),
     weekSessions: Math.round(Math.random() * 5),
-    online: Math.random() > 0.5,
+    online: isOnline,
     addedAt: Date.now(),
+    lastDrug: {
+      drug: rDrug,
+      strain: rStrain,
+      amount: rDrug === 'cannabis' ? (Math.random() * 1.5 + 0.3).toFixed(1) : Math.round(Math.random() * 150 + 50),
+      unit: rDrug === 'cannabis' ? 'g' : 'mg',
+      intensity: Math.round(Math.random() * 5 + 4),
+      xp: Math.round(Math.random() * 30 + 15),
+      ts: new Date(Date.now() - Math.random() * 7200000).toISOString(),
+    },
   };
 
   friends.push(newFriend);
@@ -756,6 +770,18 @@ function removeFriend(id) {
   renderBoard();
 }
 
+function getTimeAgo(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 2) return 'gerade eben';
+  if (mins < 60) return `vor ${mins} Min.`;
+  if (hours < 24) return `vor ${hours} Std.`;
+  return `vor ${days} Tag${days > 1 ? 'en' : ''}`;
+}
+
 function renderFriends() {
   if (!profile) return;
   document.getElementById('my-code').textContent = profile.code;
@@ -766,20 +792,47 @@ function renderFriends() {
     el.innerHTML = '<div class="empty">Noch keine Freunde. Teile deinen Code!</div>';
     return;
   }
-  el.innerHTML = friends.map(f => `
-    <div class="friend-card">
+  el.innerHTML = friends.map(f => {
+    const lastDrug = f.lastDrug;
+    const lastDrugIcon = lastDrug ? (DRUG_ICONS[lastDrug.drug] || '✨') : null;
+    const timeAgo = lastDrug ? getTimeAgo(lastDrug.ts) : null;
+    const statusText = f.online
+      ? (lastDrug ? `chillt gerade mit ${lastDrug.strain || lastDrug.drug}` : 'online')
+      : (lastDrug ? `zuletzt: ${lastDrug.strain || lastDrug.drug}` : 'noch nichts geloggt');
+
+    return `<div class="friend-card">
       <div class="friend-row">
-        <span class="friend-av">${f.avatar}</span>
+        <div style="position:relative">
+          <span class="friend-av">${f.avatar}</span>
+          ${f.online ? '<span class="friend-online-ring"></span>' : ''}
+        </div>
         <div class="friend-info">
           <div class="friend-row" style="gap:6px">
             <span class="friend-name">${f.name}</span>
             ${f.online ? '<span class="online-dot"></span>' : ''}
           </div>
-          <div class="friend-sub">${f.xp} XP · ${f.sessions} Sessions</div>
+          <div class="friend-sub">${f.xp} XP · Level ${getLevel(f.xp||0)+1}</div>
         </div>
         <button class="btn-sm" style="font-size:12px;color:#E24B4A;border-color:#E24B4A"
-          onclick="removeFriend('${f.id}')">Entfernen</button>
+          onclick="removeFriend('${f.id}')">✕</button>
       </div>
+
+      ${lastDrug ? `
+      <div class="friend-last-session">
+        <span style="font-size:18px">${lastDrugIcon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${lastDrug.strain || lastDrug.drug}</div>
+          <div style="font-size:11px;color:var(--text-3)">${lastDrug.amount}${lastDrug.unit} · High ${lastDrug.intensity}/10 · ${timeAgo}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:12px;font-weight:700;color:var(--green)">+${lastDrug.xp} XP</div>
+          ${f.online ? '<div style="font-size:10px;color:var(--green);margin-top:1px">🟢 aktiv</div>' : ''}
+        </div>
+      </div>` : `
+      <div style="font-size:12px;color:var(--text-3);margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)">
+        Noch nichts geloggt
+      </div>`}
+
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
         <span style="font-size:11px;color:var(--text-3);min-width:50px">Diese Woche</span>
         <div class="week-bar-wrap" style="flex:1">
@@ -787,7 +840,8 @@ function renderFriends() {
         </div>
         <span style="font-size:12px;font-weight:600;color:var(--green)">${f.weekXp || 0} XP</span>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ── Profile screen ───────────────────────────

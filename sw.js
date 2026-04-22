@@ -2,7 +2,7 @@
 //  Drug XP – sw.js  (Service Worker)
 // ═══════════════════════════════════════════
 
-const CACHE_NAME = 'drugxp-v14';
+const CACHE_NAME = 'drugxp-v16';
 const ASSETS = [
   '/',
   '/index.html',
