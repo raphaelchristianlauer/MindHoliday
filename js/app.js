@@ -1387,7 +1387,7 @@ const EASTER_EGGS = [
     title: 'Munchie King 👑',
     icon: '🍕',
     text: 'Du hast 20x "hungrig" geloggt. McDonalds sollte dich sponsorn.',
-    btn: 'I'm lovin' it',
+    btn: "I'm lovin' it",
     hint: 'die kartoffeln rufen',
     check: (sessions) =>
       sessions.filter(s => s.moods && s.moods.includes('hungrig')).length >= 20,
@@ -1398,7 +1398,7 @@ const EASTER_EGGS = [
     icon: '🗺️',
     text: 'Du hast alle 8 Substanzen ausprobiert. Respekt oder Sorge – wir urteilen nicht.',
     btn: 'Wissen ist Macht',
-    hint: 'valkor tec games we don't work with the police',
+    hint: "valkor tec games we don't work with the police",
     check: (sessions) => new Set(sessions.map(s => s.drug)).size >= 8,
   },
   {
