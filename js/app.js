@@ -141,12 +141,17 @@ function save() {
   if (!profile) return;
   const id = profile.id || 'legacy';
   profile.id = id;
+  // Always save locally as fallback/cache
   localStorage.setItem('dxp_profile_' + id, JSON.stringify(profile));
   localStorage.setItem('dxp_sessions_' + id, JSON.stringify(sessions));
   localStorage.setItem('dxp_friends_' + id, JSON.stringify(friends));
   localStorage.setItem('dxp_notifs_' + id, JSON.stringify(notifications));
-  // keep legacy key in sync for backwards compat
   localStorage.setItem('dxp_profile', JSON.stringify(profile));
+
+  // Sync XP to Supabase if connected
+  if (profile.sb_id) {
+    sbUpdateXP(profile.sb_id, profile.xp).catch(() => {});
+  }
 }
 
 function load() {
@@ -259,13 +264,17 @@ function createProfile() {
   const name = document.getElementById('setup-name').value.trim();
   if (!name) { showToast('Bitte Namen eingeben'); return; }
 
+  const code = generateCode();
+  const localId = Date.now().toString(36);
+
   profile = {
     name,
     avatar: selAvatar,
-    code: generateCode(),
+    code,
     xp: 0,
-    id: Date.now().toString(36),
+    id: localId,
     createdAt: Date.now(),
+    sb_id: null, // filled after Supabase creation
   };
 
   sessions = [];
@@ -280,11 +289,22 @@ function createProfile() {
   initApp();
   nav('log');
   showToast('Willkommen, ' + name + '!');
+
+  // Create in Supabase in background
+  sbCreateUser(name, selAvatar, code).then(sbUser => {
+    if (sbUser) {
+      profile.sb_id = sbUser.id;
+      save();
+    }
+  }).catch(() => {
+    // Offline – will sync later
+  });
 }
 
 function logout() {
-  // Stop running intervals
+  // Stop running intervals and realtime
   if (weekTimerInterval) { clearInterval(weekTimerInterval); weekTimerInterval = null; }
+  sbUnsubscribeAll();
   profile = null;
   sessions = [];
   friends = [];
@@ -379,7 +399,7 @@ function toggleNewForm() {
   btn.textContent = isHidden ? '↑ Abbrechen' : '+ Neues Profil erstellen';
 }
 
-function changeName() {
+async function changeName() {
   const inp = document.getElementById('new-name-inp');
   const msg = document.getElementById('name-change-msg');
   const newName = inp.value.trim();
@@ -401,24 +421,35 @@ function changeName() {
     return;
   }
 
-  // Check locally if another saved profile has this name
+  // Check locally first
   const saved = getSavedProfiles();
-  const taken = saved.find(p => p.name.toLowerCase() === newName.toLowerCase() && p.id !== profile.id);
-  if (taken) {
+  const takenLocally = saved.find(p => p.name.toLowerCase() === newName.toLowerCase() && p.id !== profile.id);
+  if (takenLocally) {
     document.getElementById('taken-name-display').textContent = newName;
     document.getElementById('name-taken-overlay').style.display = 'flex';
     inp.value = '';
     return;
   }
 
-  // TODO: When Supabase is connected, check server-side uniqueness here
-  // For now: local check only
+  // Check Supabase for global uniqueness
+  try {
+    const takenGlobally = await sbCheckNameTaken(newName);
+    if (takenGlobally) {
+      document.getElementById('taken-name-display').textContent = newName;
+      document.getElementById('name-taken-overlay').style.display = 'flex';
+      inp.value = '';
+      return;
+    }
+  } catch(e) { /* offline – skip global check */ }
+
   const oldName = profile.name;
   profile.name = newName;
   save();
 
-  // Update only the parts that changed – don't call renderProfile()
-  // because that would wipe the success message
+  // Update Supabase
+  if (profile.sb_id) {
+    sbUpdateUser(profile.sb_id, { name: newName }).catch(() => {});
+  }
   updateHeader();
   const pName = document.getElementById('p-name');
   if (pName) pName.textContent = newName;
@@ -465,7 +496,7 @@ function doReset() {
 }
 
 // ── App init ─────────────────────────────────
-function initApp() {
+async function initApp() {
   if (!profile) return;
   updateHeader();
   updateStrains();
@@ -475,6 +506,84 @@ function initApp() {
   renderProfile();
   renderNotifs();
   startWeekTimer();
+
+  // Supabase: sync profile and subscribe to realtime
+  try {
+    // Find or link Supabase account
+    if (!profile.sb_id) {
+      const sbUser = await sbGetUserByCode(profile.code);
+      if (sbUser) {
+        profile.sb_id = sbUser.id;
+        profile.xp = Math.max(profile.xp, sbUser.xp);
+        save();
+        updateHeader();
+      }
+    }
+
+    if (profile.sb_id) {
+      // Load latest sessions from Supabase
+      const sbSessions = await sbGetSessions(profile.sb_id);
+      if (sbSessions.length > sessions.length) {
+        sessions = sbSessions;
+        save();
+        renderHistory();
+      }
+
+      // Load notifications from Supabase
+      const sbNotifs = await sbGetNotifications(profile.sb_id);
+      if (sbNotifs.length) {
+        notifications = sbNotifs.map(n => ({
+          id: n.id,
+          text: n.text,
+          read: n.read,
+          time: new Date(n.created_at).toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'}),
+        }));
+        save();
+        updateHeader();
+        renderNotifs();
+      }
+
+      // Subscribe to real-time notifications
+      sbSubscribeToNotifications(profile.sb_id, (notif) => {
+        notifications.unshift({
+          id: notif.id,
+          text: notif.text,
+          read: false,
+          time: new Date(notif.created_at).toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'}),
+        });
+        save();
+        updateHeader();
+        renderNotifs();
+        showToast('🔔 ' + notif.text.slice(0, 40));
+      });
+
+      // Subscribe to friend sessions
+      const friendSbIds = friends.filter(f => f.sb_id).map(f => f.sb_id);
+      if (friendSbIds.length) {
+        sbSubscribeToFriendSessions(friendSbIds, async (session) => {
+          // Update friend's lastDrug in local state
+          const friend = friends.find(f => f.sb_id === session.user_id);
+          if (friend) {
+            friend.lastDrug = {
+              drug: session.drug,
+              strain: session.strain,
+              amount: session.amount,
+              unit: session.unit,
+              intensity: session.intensity,
+              xp: session.xp,
+              ts: session.created_at,
+            };
+            friend.online = true;
+            save();
+            renderFriends();
+          }
+        });
+      }
+    }
+  } catch(e) {
+    // Supabase not reachable – run in offline mode
+    console.log('Running offline');
+  }
 }
 
 function updateHeader() {
@@ -637,6 +746,14 @@ function logSession() {
   sessions.unshift(entry);
   profile.xp += entry.xp;
 
+  // Save to Supabase in background
+  if (profile.sb_id) {
+    sbSaveSession(profile.sb_id, entry)
+      .then(sbEntry => { if (sbEntry) entry.sb_id = sbEntry.id; })
+      .catch(() => {});
+    sbUpdateXP(profile.sb_id, profile.xp).catch(() => {});
+  }
+
   const newLevel = getLevel(profile.xp);
   if (newLevel > prevLevel) {
     addNotif(`Level-Aufstieg! Du bist jetzt Level ${newLevel + 1} – ${LEVELS[newLevel].name} ${LEVELS[newLevel].icon}`);
@@ -780,7 +897,7 @@ function copyCode() {
   }
 }
 
-function addFriend() {
+async function addFriend() {
   const code = document.getElementById('friend-inp').value.trim().toUpperCase();
   const msg  = document.getElementById('friend-msg');
   if (!code) { msg.textContent = 'Bitte Code eingeben'; return; }
@@ -791,52 +908,98 @@ function addFriend() {
   const names   = ['GrasHopper','CloudNine','PurpleHaze','SkyWalker','MoonRocket','NightOwl'];
   const avatars  = ['🌙','⚗️','🎯','💊','🌿','🍄'];
   const r = Math.floor(Math.random() * names.length);
-  const drugs = ['cannabis','mdma','lsd','psilocybin','alkohol'];
-  const rDrug = drugs[Math.floor(Math.random() * drugs.length)];
+  const fInp = document.getElementById('friend-inp');
+  fInp.value = '';
+  fInp.blur();
+
+  // Try Supabase first
+  try {
+    const sbFriend = await sbGetUserByCode(code);
+    if (sbFriend) {
+      // Real user found in Supabase!
+      const friendSessions = await sbGetFriendSessions(sbFriend.id, 1);
+      const lastSession = friendSessions[0] || null;
+      const newFriend = {
+        id: 'f_' + Date.now(),
+        sb_id: sbFriend.id,
+        name: sbFriend.name,
+        avatar: sbFriend.avatar || '🌿',
+        code: sbFriend.code,
+        xp: sbFriend.xp || 0,
+        weekXp: 0,
+        sessions: 0,
+        weekSessions: 0,
+        online: true,
+        addedAt: Date.now(),
+        lastDrug: lastSession ? {
+          drug: lastSession.drug,
+          strain: lastSession.strain,
+          amount: lastSession.amount,
+          unit: lastSession.unit,
+          intensity: lastSession.intensity,
+          xp: lastSession.xp,
+          ts: lastSession.created_at,
+        } : null,
+      };
+
+      friends.push(newFriend);
+      save();
+
+      // Add friendship in Supabase
+      if (profile.sb_id) {
+        sbAddFriend(profile.sb_id, sbFriend.id).catch(() => {});
+        // Notify the friend
+        sbSendNotification(sbFriend.id,
+          `👋 ${profile.name} hat deinen Invite-Code benutzt und ist jetzt dein Freund!`
+        ).catch(() => {});
+      }
+
+      msg.textContent = '';
+      renderFriends();
+      renderBoard();
+      addNotif(`🤝 Du hast ${newFriend.name} als Freund hinzugefügt!`);
+      showToast(newFriend.name + ' hinzugefügt!');
+      return;
+    }
+  } catch(e) {
+    // Supabase not available – fall through to simulation
+  }
+
+  // Fallback: simulate friend (offline / no Supabase)
+  const fbNames = ['GrasHopper','CloudNine','PurpleHaze','SkyWalker','MoonRocket','NightOwl'];
+  const fbAvatars = ['🌙','⚗️','🎯','💊','🌿','🍄'];
+  const fbR = Math.floor(Math.random() * fbNames.length);
+  const fbDrugs = ['cannabis','mdma','lsd','psilocybin','alkohol'];
+  const rDrug = fbDrugs[Math.floor(Math.random() * fbDrugs.length)];
   const rStrains = DEFAULT_STRAINS[rDrug] || ['unbekannt'];
   const rStrain = rStrains[Math.floor(Math.random() * rStrains.length)];
-  const isOnline = Math.random() > 0.4;
   const newFriend = {
     id: 'f_' + Date.now(),
-    name: names[r],
-    avatar: avatars[r],
+    name: fbNames[fbR],
+    avatar: fbAvatars[fbR],
     code,
     xp: Math.round(Math.random() * 600 + 50),
     weekXp: Math.round(Math.random() * 200),
     sessions: Math.round(Math.random() * 20 + 1),
     weekSessions: Math.round(Math.random() * 5),
-    online: isOnline,
+    online: Math.random() > 0.4,
     addedAt: Date.now(),
     lastDrug: {
-      drug: rDrug,
-      strain: rStrain,
-      amount: rDrug === 'cannabis' ? (Math.random() * 1.5 + 0.3).toFixed(1) : Math.round(Math.random() * 150 + 50),
+      drug: rDrug, strain: rStrain,
+      amount: rDrug === 'cannabis' ? (Math.random()*1.5+0.3).toFixed(1) : Math.round(Math.random()*150+50),
       unit: rDrug === 'cannabis' ? 'g' : 'mg',
-      intensity: Math.round(Math.random() * 5 + 4),
-      xp: Math.round(Math.random() * 30 + 15),
-      ts: new Date(Date.now() - Math.random() * 7200000).toISOString(),
+      intensity: Math.round(Math.random()*5+4),
+      xp: Math.round(Math.random()*30+15),
+      ts: new Date(Date.now() - Math.random()*7200000).toISOString(),
     },
   };
-
   friends.push(newFriend);
   save();
-  const fInp = document.getElementById('friend-inp');
-  fInp.value = '';
-  fInp.blur(); // dismiss keyboard on mobile
   msg.textContent = '';
   renderFriends();
   renderBoard();
-
-  // Local notification – when Supabase is live, this will also
-  // send a real push to the friend's device
-  addNotif(`🤝 Du hast ${newFriend.name} als Freund hinzugefügt! Dein Code wurde geteilt.`);
-
-  // Simulate: friend "added you back" after a short delay
-  setTimeout(() => {
-    addNotif(`👋 ${newFriend.name} hat deinen Invite-Code akzeptiert und ist jetzt in deiner Freundesliste!`);
-    updateHeader();
-  }, 2000);
-
+  addNotif(`🤝 Du hast ${newFriend.name} als Freund hinzugefügt!`);
+  setTimeout(() => { addNotif(`👋 ${newFriend.name} hat deinen Code akzeptiert!`); updateHeader(); }, 2000);
   showToast(newFriend.name + ' hinzugefügt!');
 }
 
@@ -957,6 +1120,7 @@ function renderProfile() {
     document.getElementById('s-fav').textContent = fav ? fav[0] : '–';
   }
 
+  renderEggLibrary();
   document.getElementById('badge-grid').innerHTML = BADGES_DEF.map(b => {
     const unlocked = b.check(sessions, profile);
     return `<div class="badge-item ${unlocked ? 'unlocked' : ''}" title="${b.desc}">
@@ -966,6 +1130,28 @@ function renderProfile() {
       ${unlocked ? '<div class="badge-check">✓</div>' : ''}
     </div>`;
   }).join('');
+}
+
+// ── Easter Egg Library ───────────────────────
+function renderEggLibrary() {
+  const el = document.getElementById('egg-library');
+  if (!el) return;
+  el.innerHTML = EASTER_EGGS.map((egg, i) => {
+    const unlocked = shownEggs.has(egg.id);
+    return `<div class="egg-lib-item ${unlocked ? 'unlocked' : 'locked'}"
+      data-egg-id="${egg.id}" data-unlocked="${unlocked}">
+      <div class="egg-lib-icon ${unlocked ? '' : 'locked-icon'}">${unlocked ? egg.icon : '❓'}</div>
+      <div class="egg-lib-name">${unlocked ? egg.title : '???'}</div>
+    </div>`;
+  }).join('');
+
+  // Add click handlers after render
+  el.querySelectorAll('.egg-lib-item[data-unlocked="true"]').forEach(item => {
+    item.addEventListener('click', () => {
+      const egg = EASTER_EGGS.find(e => e.id === item.dataset.eggId);
+      if (egg) showEgg(egg);
+    });
+  });
 }
 
 // ── Notifications ─────────────────────────────
@@ -980,6 +1166,9 @@ function markAllRead() {
   save();
   renderNotifs();
   updateHeader();
+  if (profile && profile.sb_id) {
+    sbMarkAllNotifsRead(profile.sb_id).catch(() => {});
+  }
 }
 
 function renderNotifs() {
@@ -1444,6 +1633,7 @@ function checkEasterEggs(sessions) {
 }
 
 function showEgg(egg) {
+  if (!egg) return;
   document.getElementById('egg-icon').textContent = egg.icon;
   document.getElementById('egg-title').textContent = egg.title;
   document.getElementById('egg-text').textContent = egg.text;
@@ -1451,8 +1641,8 @@ function showEgg(egg) {
   document.getElementById('egg-hint').textContent = egg.hint;
   const overlay = document.getElementById('egg-overlay');
   overlay.style.display = 'flex';
-  // run particles for fun
   runParticles('cannabis');
+  renderEggLibrary();
 }
 
 function closeEgg() {

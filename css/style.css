@@ -627,3 +627,44 @@ input[type="range"] { width: 100%; accent-color: var(--green); height: 4px; bord
   background: #1D9E75;
   border: 2px solid var(--surface);
 }
+
+/* ── Valkor Tec Games Footer ── */
+.vtg-footer {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: .08em;
+  padding: 20px 0 4px;
+  opacity: 0.5;
+}
+
+/* ── Easter Egg Library ── */
+.egg-library {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.egg-lib-item {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.egg-lib-item:active { transform: scale(0.93); }
+.egg-lib-item.locked {
+  opacity: 0.3;
+  cursor: default;
+  filter: grayscale(1);
+}
+.egg-lib-item.unlocked {
+  border-color: #BA7517;
+  background: rgba(186,117,23,0.08);
+}
+.egg-lib-icon { font-size: 24px; line-height: 1; margin-bottom: 4px; }
+.egg-lib-icon.locked-icon { font-size: 20px; }
+.egg-lib-name { font-size: 9px; font-weight: 700; color: var(--text); line-height: 1.3; }

@@ -14,7 +14,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-touch-fullscreen" content="yes">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="css/style.css?v=19">
+  <link rel="stylesheet" href="css/style.css?v=25">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="shortcut icon" href="favicon.png">
@@ -167,12 +167,14 @@
             <span>+ Session speichern</span>
           </button>
         </div>
+      <div class="vtg-footer">Valkor Tec Games ®</div>
       </section>
 
       <!-- ══ HISTORY SCREEN ══ -->
       <section id="screen-history" class="screen">
         <h2>Meine Sessions</h2>
         <div id="history-list"><div class="empty">Noch keine Sessions. Leg los!</div></div>
+      <div class="vtg-footer">Valkor Tec Games ®</div>
       </section>
 
       <!-- ══ LEADERBOARD SCREEN ══ -->
@@ -189,6 +191,7 @@
           <span class="timer-label">bis Reset</span>
         </div>
         <div id="board-list"><div class="empty">Lade...</div></div>
+      <div class="vtg-footer">Valkor Tec Games ®</div>
       </section>
 
       <!-- ══ FRIENDS SCREEN ══ -->
@@ -214,6 +217,7 @@
 
         <div class="sec-label" style="margin-bottom:8px">Freundesliste (<span id="friend-count">0</span>)</div>
         <div id="friend-list"><div class="empty">Noch keine Freunde. Teile deinen Code!</div></div>
+      <div class="vtg-footer">Valkor Tec Games ®</div>
       </section>
 
       <!-- ══ PROFILE SCREEN ══ -->
@@ -238,6 +242,9 @@
         <div class="sec-label" style="margin-bottom:8px">Badges</div>
         <div class="badge-grid" id="badge-grid"></div>
 
+        <div class="sec-label" style="margin:16px 0 4px">probier dich aus ;)</div>
+        <div class="egg-library" id="egg-library"></div>
+
         <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:10px">
 
           <!-- Name ändern -->
@@ -254,6 +261,7 @@
           <button class="btn-sm" onclick="logout()" style="padding:10px;font-size:14px">Abmelden (Profil bleibt erhalten)</button>
           <button class="btn-danger" onclick="confirmReset()">Daten zurücksetzen</button>
         </div>
+      <div class="vtg-footer">Valkor Tec Games ®</div>
       </section>
 
       <!-- ══ FRIEND PROFILE SCREEN ══ -->
@@ -285,6 +293,7 @@
 
         <div class="sec-label" style="margin-bottom:8px">Letzte Sessions</div>
         <div id="fp-sessions-list"></div>
+      <div class="vtg-footer">Valkor Tec Games ®</div>
       </section>
 
       <!-- ══ NOTIFICATIONS SCREEN ══ -->
@@ -294,6 +303,7 @@
           <button class="btn-sm" onclick="markAllRead()">Alle gelesen</button>
         </div>
         <div id="notif-list"><div class="empty">Keine Benachrichtigungen</div></div>
+      <div class="vtg-footer">Valkor Tec Games ®</div>
       </section>
 
     </main>
@@ -415,6 +425,9 @@
   <!-- Toast -->
   <div id="toast"></div>
 
-  <script src="js/app.js?v=23"></script>
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js?v=1"></script>
+  <script src="js/app.js?v=25"></script>
 </body>
 </html>
