@@ -600,10 +600,27 @@ async function initApp() {
   try {
     // Find or link Supabase account
     if (!profile.sb_id) {
+      // Try to find by code first
       const sbUser = await sbGetUserByCode(profile.code);
       if (sbUser) {
         profile.sb_id = sbUser.id;
         profile.xp = Math.max(profile.xp, sbUser.xp);
+        save();
+        updateHeader();
+      }
+    }
+
+    // Always sync code FROM Supabase (Supabase is the source of truth)
+    if (profile.sb_id) {
+      const sbUser = await sbGetUserById(profile.sb_id);
+      if (sbUser && sbUser.code !== profile.code) {
+        console.log('[MH] Code mismatch – syncing from Supabase:', sbUser.code);
+        profile.code = sbUser.code;
+        save();
+      }
+      // Also sync XP
+      if (sbUser && sbUser.xp > profile.xp) {
+        profile.xp = sbUser.xp;
         save();
         updateHeader();
       }
