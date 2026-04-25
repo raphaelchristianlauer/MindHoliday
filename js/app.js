@@ -1276,28 +1276,37 @@ function renderEggLibrary() {
 
 // ── Likes ────────────────────────────────────
 async function toggleLike(sessionId) {
-  if (!profile || !profile.sb_id) return;
+  if (!profile || !profile.sb_id) {
+    showToast('Bitte einloggen um zu liken');
+    return;
+  }
+  
   const likers = likesMap[sessionId] || [];
   const alreadyLiked = likers.includes(profile.sb_id);
 
   if (alreadyLiked) {
     likesMap[sessionId] = likers.filter(id => id !== profile.sb_id);
-    sbUnlikeSession(profile.sb_id, sessionId).catch(() => {});
+    try {
+      await sbUnlikeSession(profile.sb_id, sessionId);
+    } catch(e) { console.log('[MH] Unlike error:', e); }
   } else {
     if (!likesMap[sessionId]) likesMap[sessionId] = [];
     likesMap[sessionId].push(profile.sb_id);
-    sbLikeSession(profile.sb_id, sessionId).catch(() => {});
-
-    // Notify session owner if it's a friend's session
-    const friend = friends.find(f => f.lastDrug && f.lastDrug.sb_id === sessionId);
-    if (friend && friend.sb_id) {
-      sbSendNotification(friend.sb_id,
-        `❤️ ${profile.name} hat deine Session gemocht!`
-      ).catch(() => {});
-    }
+    try {
+      await sbLikeSession(profile.sb_id, sessionId);
+      
+      // Find session owner and notify them
+      const feed = window._friendFeed || [];
+      const session = feed.find(s => s.id === sessionId);
+      if (session && session.user_id && session.user_id !== profile.sb_id) {
+        sbSendNotification(session.user_id,
+          `❤️ ${profile.name} hat deine ${session.strain || session.drug} Session gemocht!`
+        ).catch(() => {});
+      }
+    } catch(e) { console.log('[MH] Like error:', e); }
   }
 
-  // Re-render the feed
+  // Re-render immediately for responsiveness
   renderFriendFeed();
 }
 
@@ -1312,9 +1321,27 @@ function hasLiked(sessionId) {
 
 // ── Friend Feed (Friends screen with sessions + likes) ──
 async function loadFriendFeed() {
-  if (!friends.length) return;
-  const friendSbIds = friends.filter(f => f.sb_id).map(f => f.sb_id);
-  if (!friendSbIds.length) return;
+  const el = document.getElementById('friend-feed');
+  if (!profile || !profile.sb_id) return;
+
+  try {
+    // Load friendships from Supabase directly - more reliable than local cache
+    const { data: friendships } = await sb()
+      .from('friendships')
+      .select('friend_id')
+      .eq('user_id', profile.sb_id);
+    
+    let friendSbIds = (friendships || []).map(f => f.friend_id);
+    
+    // Also include locally cached friends with sb_id
+    friends.filter(f => f.sb_id).forEach(f => {
+      if (!friendSbIds.includes(f.sb_id)) friendSbIds.push(f.sb_id);
+    });
+
+    if (!friendSbIds.length) {
+      if (el) el.innerHTML = '<div class="empty">Noch keine Freunde – teile deinen Code!</div>';
+      return;
+    }
 
   try {
     // Load recent sessions from all friends
@@ -1338,8 +1365,16 @@ async function loadFriendFeed() {
           renderFriendFeed();
         });
       });
+    } else {
+      if (el) el.innerHTML = '<div class="empty">Noch keine Sessions von Freunden</div>';
     }
-  } catch(e) {}
+  } catch(e) {
+    console.log('[MH] Feed error:', e);
+    if (el) el.innerHTML = '<div class="empty">Feed konnte nicht geladen werden</div>';
+  }
+  } catch(e) {
+    console.log('[MH] Friendship load error:', e);
+  }
 }
 
 function renderFriendFeed() {
