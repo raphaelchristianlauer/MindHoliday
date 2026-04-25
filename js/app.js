@@ -127,6 +127,26 @@ const BADGES_DEF = [
 
 const RANK_ICONS = ['🥇','🥈','🥉'];
 
+// ── Banned Names ─────────────────────────────
+const BANNED_NAMES = [
+  // Nazi/Extremismus
+  'adolfhitler','hitler','adolf','himmler','goebbels','goering','hess','eichmann',
+  'mengele','heydrich','himmler','nsdap','nazi','nazis','drittesreich','ss',
+  'gestapo','waffen','kkk','kkkmember','whitepower','whitesupremacy',
+  // Terrorismus
+  'osama','binladen','osamabinladen','isis','islamicstate','alqaeda','taliban',
+  'breivik','mcveigh',
+  // Beleidigungen
+  'nigger','nigga','faggot','retard','spastic',
+  // Explicit
+  'fick','ficken','wichser','hurensohn','scheisskind','motherfucker','asshole',
+];
+
+function isNameBanned(name) {
+  const clean = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return BANNED_NAMES.some(b => clean.includes(b));
+}
+
 // ── State ───────────────────────────────────
 let profile = null;
 let sessions = [];
@@ -264,6 +284,12 @@ function generateCode() {
 function createProfile() {
   const name = document.getElementById('setup-name').value.trim();
   if (!name) { showToast('Bitte Namen eingeben'); return; }
+
+  // Check banned names
+  if (isNameBanned(name)) {
+    showToast('Dieser Name ist nicht erlaubt');
+    return;
+  }
 
   const code = generateCode();
   const localId = Date.now().toString(36);
@@ -416,6 +442,11 @@ async function changeName() {
     msg.textContent = 'Mindestens 3 Zeichen.';
     return;
   }
+  if (isNameBanned(newName)) {
+    msg.style.color = '#E24B4A';
+    msg.textContent = 'Dieser Name ist nicht erlaubt.';
+    return;
+  }
   if (newName === profile.name) {
     msg.style.color = '#E24B4A';
     msg.textContent = 'Das ist bereits dein Name.';
@@ -460,6 +491,63 @@ async function changeName() {
   msg.textContent = '✓ Name geändert zu "' + newName + '"';
   setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
   showToast('Name geändert!');
+}
+
+async function deleteProfile() {
+  // Delete from Supabase first
+  if (profile && profile.sb_id) {
+    try {
+      // Delete all user data from Supabase
+      await sb().from('likes').delete().eq('user_id', profile.sb_id);
+      await sb().from('notifications').delete().eq('user_id', profile.sb_id);
+      await sb().from('badges').delete().eq('user_id', profile.sb_id);
+      await sb().from('easter_eggs').delete().eq('user_id', profile.sb_id);
+      await sb().from('friendships').delete().eq('user_id', profile.sb_id);
+      await sb().from('friendships').delete().eq('friend_id', profile.sb_id);
+      await sb().from('sessions').delete().eq('user_id', profile.sb_id);
+      await sb().from('users').delete().eq('id', profile.sb_id);
+    } catch(e) {
+      console.log('Supabase delete error:', e);
+    }
+  }
+
+  // Clear all local data for this profile
+  if (profile) {
+    const id = profile.id;
+    localStorage.removeItem('dxp_profile_' + id);
+    localStorage.removeItem('dxp_sessions_' + id);
+    localStorage.removeItem('dxp_friends_' + id);
+    localStorage.removeItem('dxp_notifs_' + id);
+  }
+  localStorage.removeItem('dxp_profile');
+  localStorage.removeItem('dxp_shown_eggs');
+  localStorage.removeItem('dxp_custom_strains');
+
+  // Stop intervals
+  if (weekTimerInterval) { clearInterval(weekTimerInterval); weekTimerInterval = null; }
+  sbUnsubscribeAll();
+
+  // Reset state
+  profile = null;
+  sessions = [];
+  friends = [];
+  notifications = [];
+  shownEggs = new Set();
+
+  showLoginScreen();
+  showToast('Profil gelöscht');
+}
+
+function confirmDeleteProfile() {
+  const el = document.getElementById('delete-profile-name');
+  if (el && profile) el.textContent = profile.name;
+  const overlay = document.getElementById('delete-profile-overlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function closeDeleteProfile() {
+  const overlay = document.getElementById('delete-profile-overlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 function resetProfile() {

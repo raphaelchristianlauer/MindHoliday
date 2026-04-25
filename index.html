@@ -17,7 +17,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-touch-fullscreen" content="yes">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="css/style.css?v=1777106393">
+  <link rel="stylesheet" href="css/style.css?v=1777106812">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="shortcut icon" href="favicon.png">
@@ -267,6 +267,7 @@
 
           <button class="btn-sm" onclick="logout()" style="padding:10px;font-size:14px">Abmelden (Profil bleibt erhalten)</button>
           <button class="btn-danger" onclick="confirmReset()">Daten zurücksetzen</button>
+          <button class="btn-danger" onclick="confirmDeleteProfile()" style="opacity:0.6;font-size:13px">Profil permanent löschen</button>
         </div>
       <div class="vtg-footer">Valkor Tec Games ®</div>
       </section>
@@ -405,6 +406,24 @@
     </div>
   </div>
 
+  <!-- Delete Profile Dialog -->
+  <div id="delete-profile-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;align-items:center;justify-content:center;padding:24px">
+    <div style="background:var(--surface);border-radius:20px;padding:28px 24px;width:100%;max-width:320px;text-align:center">
+      <div style="font-size:40px;margin-bottom:12px">💣</div>
+      <div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:8px">Profil permanent löschen</div>
+      <div style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:8px">
+        Dein Profil <strong style="color:var(--text)" id="delete-profile-name"></strong> wird <strong style="color:#E24B4A">unwiderruflich</strong> gelöscht – inklusive aller Sessions, XP, Badges und Freundschaften.
+      </div>
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:20px">Diese Aktion kann nicht rückgängig gemacht werden.</div>
+      <button onclick="deleteProfile()" style="width:100%;padding:13px;background:#E24B4A;color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
+        Ja, alles löschen
+      </button>
+      <button onclick="closeDeleteProfile()" style="width:100%;padding:11px;background:none;border:0.5px solid var(--border2);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:var(--text);font-family:inherit">
+        Abbrechen
+      </button>
+    </div>
+  </div>
+
   <!-- Confirm Dialog -->
   <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;align-items:center;justify-content:center;padding:24px">
     <div style="background:var(--surface);border-radius:20px;padding:28px 24px;width:100%;max-width:320px;text-align:center">
@@ -434,7 +453,7 @@
 
   <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase.js?v=1777106393"></script>
-  <script src="js/app.js?v=1777106393"></script>
+  <script src="js/supabase.js?v=1777106812"></script>
+  <script src="js/app.js?v=1777106812"></script>
 </body>
 </html>
