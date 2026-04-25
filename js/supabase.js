@@ -3,8 +3,8 @@
 //  !! DEINE KEYS HIER EINTRAGEN !!
 // ═══════════════════════════════════════════
 
-const SUPABASE_URL = 'DEINE_SUPABASE_URL';       // z.B. https://xxxx.supabase.co
-const SUPABASE_ANON_KEY = 'DEIN_ANON_KEY';       // aus Settings → API
+const SUPABASE_URL = 'https://bvgyyvbwbhhdigqxotrx.supabase.co';       // z.B. https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = 'sb_publishable_47BQSd9wjCRbWHmPNQZ1-A_TZzdB-M-';       // aus Settings → API
 
 // ── Supabase SDK laden ──────────────────────
 // Wird via CDN geladen (kein npm nötig)
