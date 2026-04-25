@@ -3,8 +3,8 @@
 //  !! DEINE KEYS HIER EINTRAGEN !!
 // ═══════════════════════════════════════════
 
-const SUPABASE_URL = 'https://bvgyyvbwbhhdigqxotrx.supabase.co';       // z.B. https://xxxx.supabase.co
-const SUPABASE_ANON_KEY = 'sb_publishable_47BQSd9wjCRbWHmPNQZ1-A_TZzdB-M-';       // aus Settings → API
+const SUPABASE_URL = 'DEINE_SUPABASE_URL';       // z.B. https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = 'DEIN_ANON_KEY';       // aus Settings → API
 
 // ── Supabase SDK laden ──────────────────────
 // Wird via CDN geladen (kein npm nötig)
@@ -243,4 +243,48 @@ async function sbGetUnlockedEggs(userId) {
     .select('egg_id')
     .eq('user_id', userId);
   return (data || []).map(e => e.egg_id);
+}
+
+// ── Likes ────────────────────────────────────
+async function sbLikeSession(userId, sessionId) {
+  const { error } = await sb()
+    .from('likes')
+    .insert([{ user_id: userId, session_id: sessionId }]);
+  if (error && error.code !== '23505') throw error; // ignore duplicate
+}
+
+async function sbUnlikeSession(userId, sessionId) {
+  await sb().from('likes')
+    .delete()
+    .eq('user_id', userId)
+    .eq('session_id', sessionId);
+}
+
+async function sbGetLikesForSessions(sessionIds) {
+  if (!sessionIds.length) return {};
+  const { data } = await sb()
+    .from('likes')
+    .select('session_id, user_id')
+    .in('session_id', sessionIds);
+  
+  // Group by session_id
+  const map = {};
+  (data || []).forEach(l => {
+    if (!map[l.session_id]) map[l.session_id] = [];
+    map[l.session_id].push(l.user_id);
+  });
+  return map;
+}
+
+function sbSubscribeToLikes(sessionIds, onLike) {
+  if (!sessionIds.length) return;
+  const sub = sb()
+    .channel('likes-feed')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'likes',
+    }, payload => onLike(payload))
+    .subscribe();
+  _realtimeSubs.push(sub);
 }

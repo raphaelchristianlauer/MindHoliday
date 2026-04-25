@@ -135,6 +135,7 @@ let notifications = [];
 let filterMode = 'week';
 let weekTimerInterval = null;
 let shownEggs = new Set();
+let likesMap = {}; // sessionId -> [userIds who liked]
 
 // ── Storage helpers ─────────────────────────
 function save() {
@@ -1029,6 +1030,7 @@ function renderFriends() {
   if (!profile) return;
   document.getElementById('my-code').textContent = profile.code;
   document.getElementById('friend-count').textContent = friends.length;
+  loadFriendFeed();
 
   const el = document.getElementById('friend-list');
   if (!friends.length) {
@@ -1152,6 +1154,116 @@ function renderEggLibrary() {
       if (egg) showEgg(egg);
     });
   });
+}
+
+// ── Likes ────────────────────────────────────
+async function toggleLike(sessionId) {
+  if (!profile || !profile.sb_id) return;
+  const likers = likesMap[sessionId] || [];
+  const alreadyLiked = likers.includes(profile.sb_id);
+
+  if (alreadyLiked) {
+    likesMap[sessionId] = likers.filter(id => id !== profile.sb_id);
+    sbUnlikeSession(profile.sb_id, sessionId).catch(() => {});
+  } else {
+    if (!likesMap[sessionId]) likesMap[sessionId] = [];
+    likesMap[sessionId].push(profile.sb_id);
+    sbLikeSession(profile.sb_id, sessionId).catch(() => {});
+
+    // Notify session owner if it's a friend's session
+    const friend = friends.find(f => f.lastDrug && f.lastDrug.sb_id === sessionId);
+    if (friend && friend.sb_id) {
+      sbSendNotification(friend.sb_id,
+        `❤️ ${profile.name} hat deine Session gemocht!`
+      ).catch(() => {});
+    }
+  }
+
+  // Re-render the feed
+  renderFriendFeed();
+}
+
+function getLikeCount(sessionId) {
+  return (likesMap[sessionId] || []).length;
+}
+
+function hasLiked(sessionId) {
+  if (!profile || !profile.sb_id) return false;
+  return (likesMap[sessionId] || []).includes(profile.sb_id);
+}
+
+// ── Friend Feed (Friends screen with sessions + likes) ──
+async function loadFriendFeed() {
+  if (!friends.length) return;
+  const friendSbIds = friends.filter(f => f.sb_id).map(f => f.sb_id);
+  if (!friendSbIds.length) return;
+
+  try {
+    // Load recent sessions from all friends
+    const { data } = await sb()
+      .from('sessions')
+      .select('*, users(name, avatar, code)')
+      .in('user_id', friendSbIds)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    if (data && data.length) {
+      window._friendFeed = data;
+      const sessionIds = data.map(s => s.id);
+      likesMap = await sbGetLikesForSessions(sessionIds);
+      renderFriendFeed();
+
+      // Subscribe to new likes in realtime
+      sbSubscribeToLikes(sessionIds, () => {
+        sbGetLikesForSessions(sessionIds).then(map => {
+          likesMap = map;
+          renderFriendFeed();
+        });
+      });
+    }
+  } catch(e) {}
+}
+
+function renderFriendFeed() {
+  const feed = window._friendFeed || [];
+  const el = document.getElementById('friend-feed');
+  if (!el) return;
+
+  if (!feed.length) {
+    el.innerHTML = '<div class="empty">Noch keine Sessions von Freunden</div>';
+    return;
+  }
+
+  el.innerHTML = feed.map(s => {
+    const icon = DRUG_ICONS[s.drug] || '✨';
+    const liked = hasLiked(s.id);
+    const likeCount = getLikeCount(s.id);
+    const timeAgo = getTimeAgo(s.created_at);
+    const user = s.users || {};
+
+    return `<div class="feed-card">
+      <div class="feed-header">
+        <span class="feed-avatar">${user.avatar || '🌿'}</span>
+        <div class="feed-user-info">
+          <span class="feed-username">${user.name || 'Unbekannt'}</span>
+          <span class="feed-time">${timeAgo}</span>
+        </div>
+        <span class="feed-drug-icon">${icon}</span>
+      </div>
+      <div class="feed-body">
+        <div class="feed-drug-name">${s.strain || s.drug}</div>
+        <div class="feed-details">${s.amount}${s.unit} · High ${s.intensity}/10 · Wohl ${s.wellbeing}/10</div>
+        ${s.moods && s.moods.length ? `<div class="feed-moods">${s.moods.map(m => `<span class="mood-tag">${m}</span>`).join('')}</div>` : ''}
+        ${s.note ? `<div class="feed-note">"${s.note}"</div>` : ''}
+      </div>
+      <div class="feed-footer">
+        <button class="like-btn ${liked ? 'liked' : ''}" onclick="toggleLike(${s.id})">
+          ${liked ? '❤️' : '🤍'} ${likeCount > 0 ? likeCount : ''}
+        </button>
+        <span class="feed-xp">+${s.xp} XP</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Notifications ─────────────────────────────
