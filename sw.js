@@ -1,104 +1,54 @@
-// ═══════════════════════════════════════════
-//  Drug XP – sw.js  (Service Worker)
-// ═══════════════════════════════════════════
+// MindHoliday Service Worker – minimal, kein aggressives Caching
+const CACHE_NAME = 'mindholiday-v1';
 
-const CACHE_NAME = 'drugxp-v1777105733';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/css/style.css',
-  '/js/app.js',
-  '/manifest.json',
-  '/favicon.svg',
-  '/favicon.png',
-];
-
-// ── Install: cache all shell assets ──────────
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-  );
+// Bei Installation alten Cache löschen
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
-// ── Activate: remove old caches ───────────────
+// Bei Aktivierung ALLE alten Caches löschen
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+      Promise.all(keys.map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// ── Fetch: cache-first for shell, network-first for API ──
+// Fetch: immer zuerst Netzwerk, dann Cache als Fallback
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
-  // API calls (Supabase) → always network
-  if (url.hostname.includes('supabase')) {
-    event.respondWith(fetch(event.request).catch(() => new Response('offline', { status: 503 })));
+  // Supabase und CDN immer live laden
+  if (event.request.url.includes('supabase') || 
+      event.request.url.includes('cdn.jsdelivr')) {
     return;
   }
 
-  // Shell assets → cache first, fallback to network
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      return cached || fetch(event.request).then(response => {
-        // Cache new assets dynamically
-        if (response.ok && event.request.method === 'GET') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
+    fetch(event.request)
+      .then(response => {
+        // Frische Antwort im Cache speichern
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
-      });
-    }).catch(() => {
-      // Offline fallback → serve cached index.html
-      if (event.request.destination === 'document') {
-        return caches.match('/index.html');
-      }
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });
 
-// ── Push Notifications ────────────────────────
+// Push Notifications
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || 'Drug XP';
-  const options = {
-    body: data.body || 'Neue Benachrichtigung',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
-    vibrate: [100, 50, 100],
-    data: { url: data.url || '/' },
-    actions: data.actions || [],
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-// ── Notification click ────────────────────────
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(windowClients => {
-      for (const client of windowClients) {
-        if (client.url === url && 'focus' in client) return client.focus();
-      }
-      if (clients.openWindow) return clients.openWindow(url);
+    self.registration.showNotification(data.title || 'MindHoliday', {
+      body: data.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      vibrate: [100, 50, 100],
     })
   );
 });
 
-// ── Background sync (for offline session logging) ──
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-sessions') {
-    event.waitUntil(syncPendingSessions());
-  }
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow('/'));
 });
-
-async function syncPendingSessions() {
-  // When Supabase is connected: read from IndexedDB, push to server
-  // For now this is a placeholder
-  console.log('[SW] Syncing pending sessions...');
-}
