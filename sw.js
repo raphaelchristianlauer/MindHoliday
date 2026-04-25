@@ -1,5 +1,5 @@
 // MindHoliday Service Worker – minimal, kein aggressives Caching
-const CACHE_NAME = 'mindholiday-v1777106822';
+const CACHE_NAME = 'mindholiday-v1777107205';
 
 // Bei Installation alten Cache löschen
 self.addEventListener('install', () => {

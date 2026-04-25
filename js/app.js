@@ -992,6 +992,7 @@ async function addFriend() {
   if (!code) { msg.textContent = 'Bitte Code eingeben'; return; }
   if (code === profile.code) { msg.textContent = 'Das ist dein eigener Code!'; return; }
   if (friends.find(f => f.code === code)) { msg.textContent = 'Schon in deiner Liste'; return; }
+  console.log('[MH] Adding friend with code:', code, '| My code:', profile ? profile.code : 'none');
 
   // Simulate finding a player – replace this with a Supabase lookup later
   const names   = ['GrasHopper','CloudNine','PurpleHaze','SkyWalker','MoonRocket','NightOwl'];
@@ -1003,8 +1004,10 @@ async function addFriend() {
 
   // Try Supabase first
   try {
+    console.log('[MH] Looking up code:', code, '| SUPABASE_URL configured:', typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL !== 'DEINE_SUPABASE_URL');
     const sbFriend = await sbGetUserByCode(code);
-    if (sbFriend) {
+    console.log('[MH] Supabase result:', sbFriend);
+    if (sbFriend && sbFriend.id) {
       // Real user found in Supabase!
       const friendSessions = await sbGetFriendSessions(sbFriend.id, 1);
       const lastSession = friendSessions[0] || null;
@@ -1051,10 +1054,20 @@ async function addFriend() {
       return;
     }
   } catch(e) {
-    // Supabase not available – fall through to simulation
+    console.log('[MH] Supabase error:', e.message);
+    // Show error instead of simulating
+    msg.style.color = '#E24B4A';
+    msg.textContent = 'Verbindungsfehler – versuch es nochmal';
+    return;
   }
 
-  // Fallback: simulate friend (offline / no Supabase)
+  // Code not found in Supabase
+  msg.style.color = '#E24B4A';
+  msg.textContent = 'Code nicht gefunden. Stelle sicher dass dein Freund die App bereits nutzt.';
+  return;
+
+  // Fallback: simulate friend (offline / no Supabase) - DISABLED
+  // eslint-disable-next-line no-unreachable
   const fbNames = ['GrasHopper','CloudNine','PurpleHaze','SkyWalker','MoonRocket','NightOwl'];
   const fbAvatars = ['🌙','⚗️','🎯','💊','🌿','🍄'];
   const fbR = Math.floor(Math.random() * fbNames.length);
