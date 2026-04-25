@@ -31,18 +31,19 @@ async function sbGetUserByCode(code) {
   const { data, error } = await sb()
     .from('users')
     .select('*')
-    .eq('code', code)
-    .single();
-  if (error) return null;
+    .eq('code', code.trim().toUpperCase())
+    .maybeSingle(); // won't 406 if no result
+  if (error) { console.log('[MH] sbGetUserByCode error:', error.message); return null; }
   return data;
 }
 
 async function sbGetUserById(id) {
-  const { data } = await sb()
+  const { data, error } = await sb()
     .from('users')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
+  if (error) console.log('[MH] sbGetUserById error:', error.message);
   return data;
 }
 
@@ -51,7 +52,7 @@ async function sbCheckNameTaken(name) {
     .from('users')
     .select('id')
     .ilike('name', name)
-    .single();
+    .maybeSingle();
   return !!data;
 }
 

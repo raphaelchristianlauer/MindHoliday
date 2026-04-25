@@ -1148,6 +1148,9 @@ function renderFriends() {
   if (!profile) return;
   document.getElementById('my-code').textContent = profile.code;
   document.getElementById('friend-count').textContent = friends.length;
+  // Show loading state
+  const feedEl = document.getElementById('friend-feed');
+  if (feedEl) feedEl.innerHTML = '<div class="empty">Lade Feed...</div>';
   loadFriendFeed();
 
   const el = document.getElementById('friend-list');
