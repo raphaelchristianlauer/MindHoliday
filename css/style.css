@@ -776,3 +776,100 @@ input[type="range"] { width: 100%; accent-color: var(--green); height: 4px; bord
   font-weight: 700;
   color: var(--green);
 }
+
+/* ── Global Ticker ── */
+.ticker-total-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 16px;
+  text-align: center;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.ticker-total-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--green), #5DCAA5, var(--green));
+  background-size: 200%;
+  animation: gradientMove 3s linear infinite;
+}
+.ticker-total-num {
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.3s;
+}
+.ticker-total-label {
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin-top: 4px;
+}
+.ticker-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ticker-icon {
+  font-size: 28px;
+  width: 50px; height: 50px;
+  background: var(--surface2);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.5px solid var(--border);
+  flex-shrink: 0;
+}
+.ticker-info { flex: 1; }
+.ticker-drug-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+.ticker-amount {
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 700;
+  margin-top: 2px;
+}
+.ticker-sessions {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+.ticker-bar-wrap {
+  height: 4px;
+  background: var(--border);
+  border-radius: 99px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.ticker-bar {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--green);
+  transition: width 1s cubic-bezier(.22,1,.36,1);
+}
+.ticker-rank {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-3);
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}

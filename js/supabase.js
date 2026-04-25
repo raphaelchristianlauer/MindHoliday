@@ -289,3 +289,44 @@ function sbSubscribeToLikes(sessionIds, onLike) {
     .subscribe();
   _realtimeSubs.push(sub);
 }
+
+// ── Global Ticker ─────────────────────────────
+async function sbGetGlobalStats() {
+  try {
+    // Total sessions and users
+    const { count: totalSessions } = await sb()
+      .from('sessions')
+      .select('*', { count: 'exact', head: true });
+
+    const { count: totalUsers } = await sb()
+      .from('users')
+      .select('*', { count: 'exact', head: true });
+
+    // Per-drug stats
+    const { data: drugData } = await sb()
+      .from('sessions')
+      .select('drug, amount, unit');
+
+    // Aggregate per drug
+    const drugStats = {};
+    (drugData || []).forEach(s => {
+      if (!drugStats[s.drug]) drugStats[s.drug] = { sessions: 0, totalG: 0, totalMg: 0, totalPcs: 0 };
+      drugStats[s.drug].sessions++;
+
+      const amt = parseFloat(s.amount) || 0;
+      const unit = (s.unit || '').toLowerCase();
+
+      if (unit === 'g') drugStats[s.drug].totalG += amt;
+      else if (unit === 'mg') drugStats[s.drug].totalG += amt / 1000;
+      else if (unit === 'kg') drugStats[s.drug].totalG += amt * 1000;
+      else if (['stück','pille','lines','züge'].includes(unit)) drugStats[s.drug].totalPcs += amt;
+      else if (unit === 'µg') drugStats[s.drug].totalG += amt / 1000000;
+      else if (unit === 'ml' || unit === 'cl') drugStats[s.drug].totalG += amt;
+    });
+
+    return { totalSessions: totalSessions || 0, totalUsers: totalUsers || 0, drugStats };
+  } catch(e) {
+    console.log('[MH] Ticker error:', e);
+    return null;
+  }
+}

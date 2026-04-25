@@ -714,11 +714,12 @@ function nav(screen) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + screen).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach((b, i) => {
-    b.classList.toggle('active', ['log','history','board','friends','profile'][i] === screen);
+    b.classList.toggle('active', ['log','history','board','friends','ticker','profile'][i] === screen);
   });
   if (screen === 'board') renderBoard();
   if (screen === 'profile') renderProfile();
   if (screen === 'notifs') { renderNotifs(); updateHeader(); }
+  if (screen === 'ticker') renderTicker();
 }
 
 // ── Session logging ──────────────────────────
@@ -1915,6 +1916,83 @@ function showEgg(egg) {
 
 function closeEgg() {
   document.getElementById('egg-overlay').style.display = 'none';
+}
+
+// ── Global Ticker ─────────────────────────────
+const TICKER_LABELS = {
+  cannabis:   { name: 'Cannabis',          unit: 'g',    label: s => `${formatAmount(s.totalG)}g geraucht` },
+  mdma:       { name: 'MDMA / Ecstasy',    unit: 'pcs',  label: s => `${Math.round(s.totalPcs)} Pillen genommen` },
+  lsd:        { name: 'LSD',               unit: 'pcs',  label: s => `${Math.round(s.totalPcs)} Trips geflogen` },
+  psilocybin: { name: 'Pilze',             unit: 'g',    label: s => `${formatAmount(s.totalG)}g gegessen` },
+  alkohol:    { name: 'Alkohol',           unit: 'pcs',  label: s => `${Math.round(s.totalPcs)} Drinks geloggt` },
+  kokain:     { name: 'Kokain',            unit: 'g',    label: s => `${formatAmount(s.totalG * 1000)}mg gezogen` },
+  speed:      { name: 'Speed',             unit: 'g',    label: s => `${formatAmount(s.totalG * 1000)}mg genommen` },
+  ketamin:    { name: 'Ketamin',           unit: 'g',    label: s => `${formatAmount(s.totalG * 1000)}mg geloggt` },
+  andere:     { name: 'Andere',            unit: 'pcs',  label: s => `${s.sessions} Sessions` },
+};
+
+const RANK_MEDALS = ['🥇','🥈','🥉'];
+
+function formatAmount(num) {
+  if (num >= 1000000) return (num/1000000).toFixed(1) + 'M';
+  if (num >= 1000) return (num/1000).toFixed(1) + 'k';
+  return num.toFixed(1).replace(/\.0$/, '');
+}
+
+async function renderTicker() {
+  const stats = await sbGetGlobalStats();
+  if (!stats) {
+    document.getElementById('ticker-list').innerHTML = 
+      '<div class="empty">Ticker konnte nicht geladen werden</div>';
+    return;
+  }
+
+  // Animate total numbers
+  animateNumber('ticker-total-sessions', stats.totalSessions);
+  animateNumber('ticker-total-users', stats.totalUsers);
+
+  // Sort drugs by sessions
+  const drugs = Object.entries(stats.drugStats)
+    .sort((a, b) => b[1].sessions - a[1].sessions);
+
+  const maxSessions = drugs[0]?.[1]?.sessions || 1;
+
+  document.getElementById('ticker-list').innerHTML = drugs.map(([drug, s], i) => {
+    const info = TICKER_LABELS[drug] || { name: drug, label: () => `${s.sessions} Sessions` };
+    const icon = DRUG_ICONS[drug] || '✨';
+    const pct = Math.round(s.sessions / maxSessions * 100);
+    const medal = i < 3 ? RANK_MEDALS[i] : `${i+1}`;
+
+    return `<div class="ticker-card">
+      <div class="ticker-rank">${medal}</div>
+      <div class="ticker-icon">${icon}</div>
+      <div class="ticker-info">
+        <div class="ticker-drug-name">${info.name}</div>
+        <div class="ticker-amount">${info.label(s)}</div>
+        <div class="ticker-sessions">${s.sessions} Sessions · ${stats.totalUsers} Spieler</div>
+        <div class="ticker-bar-wrap">
+          <div class="ticker-bar" style="width:${pct}%"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function animateNumber(id, target) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const start = 0;
+  const duration = 1500;
+  const startTime = performance.now();
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(start + (target - start) * eased).toLocaleString('de-DE');
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
 }
 
 // ── Boot ──────────────────────────────────────

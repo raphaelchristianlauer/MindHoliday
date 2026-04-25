@@ -17,7 +17,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-touch-fullscreen" content="yes">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="css/style.css?v=1777106812">
+  <link rel="stylesheet" href="css/style.css?v=1777109832">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="shortcut icon" href="favicon.png">
@@ -304,6 +304,22 @@
       <div class="vtg-footer">Valkor Tec Games ®</div>
       </section>
 
+      <!-- ══ TICKER SCREEN ══ -->
+      <section id="screen-ticker" class="screen">
+        <h2>Globaler Ticker</h2>
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:1rem;line-height:1.6">
+          Alles was jemals auf MindHoliday geloggt wurde – live aus der Datenbank.
+        </div>
+        <div id="ticker-total" class="ticker-total-card">
+          <div class="ticker-total-num" id="ticker-total-sessions">–</div>
+          <div class="ticker-total-label">Sessions weltweit geloggt</div>
+          <div class="ticker-total-num" id="ticker-total-users" style="font-size:28px;margin-top:8px">–</div>
+          <div class="ticker-total-label">aktive Spieler</div>
+        </div>
+        <div id="ticker-list"></div>
+        <div class="vtg-footer">Valkor Tec Games ®</div>
+      </section>
+
       <!-- ══ NOTIFICATIONS SCREEN ══ -->
       <section id="screen-notifs" class="screen">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
@@ -341,6 +357,12 @@
           <svg class="nav-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <span>Freunde</span>
+      </button>
+      <button class="nav-btn" onclick="nav('ticker')">
+        <div class="nav-icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-4"/></svg>
+        </div>
+        <span>Ticker</span>
       </button>
       <button class="nav-btn" onclick="nav('profile')">
         <div class="nav-icon-wrap">
@@ -453,8 +475,8 @@
 
   <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/supabase.js?v=1777108892"></script>
-  <script src="js/app.js?v=1777108892"></script>
+  <script src="js/config.js?v=1777109222"></script>
+  <script src="js/supabase.js?v=1777109832"></script>
+  <script src="js/app.js?v=1777109832"></script>
 </body>
 </html>
